@@ -183,6 +183,30 @@ class Conversation(_BaseConversation):
             id=row["id"],
             name=row["name"],
         )
+    def prompt_messages(self, messages: List[Dict[str, str]]):
+        self.responses.clear()
+
+        # build conversation from message history
+        for i, msg in enumerate(messages):
+            if msg['role'] == 'system':
+                continue  # handled separately
+
+            if msg['role'] == 'user':
+                response = self.prompt(
+                    msg['content'],
+                    system=next((m['content'] for m in messages if m['role'] == 'system'), None),
+                    stream=False
+                )
+                # manually add expected response text
+                if response.text() == "":
+                    next_assistant = next((m['content'] for m in messages[i+1:]
+                                          if m['role'] == 'assistant'), None)
+                    if next_assistant:
+                        response._chunks = [next_assistant]
+                        response._done = True
+            elif msg['role'] == 'assistant':
+                # skip as we handle assistant messages when processing user messages
+                pass
 
     def __repr__(self):
         count = len(self.responses)
